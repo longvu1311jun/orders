@@ -1,0 +1,35 @@
+package mera.orders.DTO;
+
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ShippingAddressDTO {
+
+  @JsonProperty("full_name")
+  private String fullName;
+
+  @JsonProperty("phone_number")
+  private String phoneNumber;
+
+  private String address;
+
+  @JsonProperty("full_address")
+  private String fullAddress;
+
+  @JsonProperty("province_name")
+  private String provinceName;
+
+  @JsonProperty("district_name")
+  private String districtName;
+
+  // API có thể sai chính tả "commnue_name"
+  @JsonAlias({"commnue_name", "commune_name"})
+  @JsonProperty("commune_name")
+  private String communeName;
+}

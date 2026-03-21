@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test API - Orders Preview</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 24px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 4px 0;
+      font-size: 22px;
+      color: #1a1a1a;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .field.full-width { grid-column: 1 / -1; }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    label .hint { font-weight: 400; color: #999; }
+
+    input, select {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus { border-color: #4f90d9; }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    button.primary { background: #4f90d9; color: #fff; }
+    button.primary:hover:not(:disabled) { background: #3a7bc8; }
+
+    button.secondary { background: #e8e8e8; color: #333; }
+    button.secondary:hover:not(:disabled) { background: #d8d8d8; }
+
+    button.danger { background: #e74c3c; color: #fff; }
+    button.danger:hover:not(:disabled) { background: #c0392b; }
+
+    .result-section { margin-top: 0; }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .timestamp-box {
+      background: #f8f9fa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+
+    .timestamp-box .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .timestamp-box .row:last-child { margin-bottom: 0; }
+
+    .timestamp-box .lbl { min-width: 150px; color: #888; }
+
+    .timestamp-box .val {
+      font-family: 'Consolas', 'Courier New', monospace;
+      color: #d63384;
+      font-weight: 600;
+    }
+
+    .info-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .info-row .lbl { min-width: 100px; color: #888; }
+
+    .info-row .val {
+      font-weight: 600;
+      color: #222;
+    }
+
+    .json-box {
+      background: #1a1a2e;
+      color: #a8e6cf;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      word-break: break-all;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 14px;
+      white-space: pre-wrap;
+    }
+
+    .json-box .json-key   { color: #ffd166; }
+    .json-box .json-num  { color: #a8e6cf; }
+    .json-box .json-str  { color: #a8e6cf; }
+    .json-box .json-bool { color: #ff6b6b; }
+    .json-box .json-null { color: #888; }
+
+    .error-box {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #856404;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .error-box.visible { display: block; }
+
+    .success-badge {
+      display: inline-block;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .loading {
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 14px;
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      animation: spin 1s linear infinite;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>API Orders Preview</h1>
+  <p class="subtitle">Gọi backend proxy để fetch orders. api_key không bị lộ ở frontend.</p>
+
+  <div class="card">
+    <div class="form-grid">
+      <div class="field">
+        <label>updateStatus</label>
+        <select id="updateStatus">
+          <option value="inserted_at">inserted_at</option>
+          <option value="updated_at">updated_at</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>status</label>
+        <select id="status">
+          <option value="">-- Không lọc --</option>
+          <option value="0">0 - Mới tạo</option>
+          <option value="1">1 - Chờ xác nhận</option>
+          <option value="2">2 - Đã xác nhận</option>
+          <option value="3">3 - Hoàn thành</option>
+          <option value="4">4 - Đã hủy</option>
+          <option value="5">5 - Trả hàng</option>
+          <option value="6">6 - Đang giao</option>
+          <option value="7">7 - Giao thất bại</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Start Date <span class="hint">(yyyy-MM-dd)</span></label>
+        <input type="date" id="startDate" value="2025-12-01">
+      </div>
+
+      <div class="field">
+        <label>End Date <span class="hint">(yyyy-MM-dd)</span></label>
+        <input type="date" id="endDate" value="2025-12-31">
+      </div>
+
+      <div class="field">
+        <label>page_number</label>
+        <input type="number" id="pageNumber" value="1" min="1">
+      </div>
+
+      <div class="field">
+        <label>page_size</label>
+        <input type="number" id="pageSize" value="200" min="1" max="500">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary" id="btnSend" onclick="sendRequest()">Gửi Request</button>
+      <button class="secondary" onclick="clearResult()">Xóa Kết Quả</button>
+      <button class="danger" id="btnSync" onclick="syncData()">Sync Data</button>
+    </div>
+
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <div class="card result-section">
+    <div class="section-title">Kết quả xử lý thời gian (backend)</div>
+
+    <div class="timestamp-box">
+      <div class="row">
+        <span class="lbl">startDate đã xử lý:</span>
+        <span class="val" id="startProcessed">—</span>
+      </div>
+      <div class="row">
+        <span class="lbl">startDateTime (timestamp):</span>
+        <span class="val" id="startTimestamp">—</span>
+      </div>
+      <div class="row">
+        <span class="lbl">endDate đã xử lý:</span>
+        <span class="val" id="endProcessed">—</span>
+      </div>
+      <div class="row">
+        <span class="lbl">endDateTime (timestamp):</span>
+        <span class="val" id="endTimestamp">—</span>
+      </div>
+    </div>
+
+    <div class="info-row">
+      <span class="lbl">Số orders trả về:</span>
+      <span class="val" id="totalOrders">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Trạng thái:</span>
+      <span class="val" id="statusFilter">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Page / Size:</span>
+      <span class="val" id="pageInfo">—</span>
+    </div>
+
+    <div class="json-box" id="jsonOutput">Chưa có kết quả. Nhấn "Gửi Request" để bắt đầu.</div>
+  </div>
+
+</div>
+
+<script>
+  /**
+   * Flow:
+   * 1. Frontend gửi POST /api/orders/preview với JSON body
+   * 2. Backend xử lý ngày: startDate = ngày 00:00:00 - 7h,
+   *                         endDate   = ngày 23:59:59 - 7h
+   *    rồi convert sang Unix timestamp (seconds)
+   * 3. Backend gọi OrderApiClient với params động
+   * 4. Backend trả OrderPreviewResult JSON về frontend
+   * 5. Frontend hiển thị JSON trong <pre>
+   */
+
+  var isLoading = false;
+
+  function sendRequest() {
+    if (isLoading) return;
+
+    var errorBox = document.getElementById('errorBox');
+    var jsonOutput = document.getElementById('jsonOutput');
+
+    // Hide previous error
+    errorBox.classList.remove('visible');
+    jsonOutput.textContent = '';
+
+    // Gather values
+    var startDate    = document.getElementById('startDate').value.trim();
+    var endDate      = document.getElementById('endDate').value.trim();
+    var status       = document.getElementById('status').value.trim();
+    var pageNumber   = parseInt(document.getElementById('pageNumber').value) || 1;
+    var pageSize     = parseInt(document.getElementById('pageSize').value) || 200;
+    var updateStatus = document.getElementById('updateStatus').value;
+
+    // Client-side validation (basic)
+    if (!startDate) {
+      showError('Vui lòng chọn Start Date');
+      return;
+    }
+    if (!endDate) {
+      showError('Vui lòng chọn End Date');
+      return;
+    }
+    if (endDate < startDate) {
+      showError('End Date không được nhỏ hơn Start Date');
+      return;
+    }
+
+    // Build request body
+    var body = {
+      startDate: startDate,
+      endDate: endDate,
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      updateStatus: updateStatus
+    };
+
+    // Only include status if it has a value
+    if (status !== '') {
+      body.status = status;
+    }
+
+    // Show loading state
+    var btn = document.getElementById('btnSend');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>Đang gửi...';
+    isLoading = true;
+
+    // Send POST request
+    fetch('/api/orders/preview', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+    .then(function(response) {
+      // Read response as JSON first
+      return response.json().then(function(data) {
+        return { ok: response.ok, status: response.status, data: data };
+      });
+    })
+    .then(function(result) {
+      // Update timestamp display from response
+      document.getElementById('startProcessed').textContent =
+        result.data.startDate || '—';
+      document.getElementById('startTimestamp').textContent =
+        result.data.startTimestamp || '—';
+      document.getElementById('endProcessed').textContent =
+        result.data.endDate || '—';
+      document.getElementById('endTimestamp').textContent =
+        result.data.endTimestamp || '—';
+      document.getElementById('totalOrders').textContent =
+        (result.data.totalFromApi != null) ? result.data.totalFromApi : '—';
+      document.getElementById('statusFilter').textContent =
+        (result.data.status) ? result.data.status : 'không lọc';
+      document.getElementById('pageInfo').textContent =
+        (result.data.pageNumber || '1') + ' / ' + (result.data.pageSize || '200');
+
+      if (!result.ok) {
+        // Server returned 4xx/5xx
+        var errMsg = result.data.error || 'Unknown error';
+        showError('Lỗi ' + result.status + ': ' + errMsg);
+        jsonOutput.textContent = JSON.stringify(result.data, null, 2);
+      } else {
+        // Success - display JSON
+        jsonOutput.textContent = JSON.stringify(result.data, null, 2);
+      }
+    })
+    .catch(function(err) {
+      showError('Request failed: ' + err.message);
+    })
+    .finally(function() {
+      // Reset button
+      btn.disabled = false;
+      btn.textContent = 'Gửi Request';
+      isLoading = false;
+    });
+  }
+
+  function clearResult() {
+    document.getElementById('jsonOutput').textContent =
+      'Chưa có kết quả. Nhấn "Gửi Request" để bắt đầu.';
+    document.getElementById('errorBox').classList.remove('visible');
+    document.getElementById('startProcessed').textContent = '—';
+    document.getElementById('startTimestamp').textContent = '—';
+    document.getElementById('endProcessed').textContent = '—';
+    document.getElementById('endTimestamp').textContent = '—';
+    document.getElementById('totalOrders').textContent = '—';
+    document.getElementById('statusFilter').textContent = '—';
+    document.getElementById('pageInfo').textContent = '—';
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('errorBox');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+
+  function syncData() {
+    if (isLoading) return;
+
+    var errorBox = document.getElementById('errorBox');
+    var jsonOutput = document.getElementById('jsonOutput');
+
+    errorBox.classList.remove('visible');
+    jsonOutput.textContent = '';
+
+    // Gather same values as preview
+    var startDate    = document.getElementById('startDate').value.trim();
+    var endDate      = document.getElementById('endDate').value.trim();
+    var status       = document.getElementById('status').value.trim();
+    var pageNumber   = parseInt(document.getElementById('pageNumber').value) || 1;
+    var pageSize     = parseInt(document.getElementById('pageSize').value) || 200;
+    var updateStatus = document.getElementById('updateStatus').value;
+
+    if (!startDate || !endDate) {
+      showError('Vui lòng chọn Start Date và End Date');
+      return;
+    }
+
+    var body = {
+      startDate: startDate,
+      endDate: endDate,
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      updateStatus: updateStatus
+    };
+    if (status !== '') {
+      body.status = status;
+    }
+
+    var btn = document.getElementById('btnSync');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span>Đang sync...';
+    isLoading = true;
+
+    fetch('/api/orders/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    .then(function(response) {
+      return response.json().then(function(data) {
+        return { ok: response.ok, status: response.status, data: data };
+      });
+    })
+    .then(function(result) {
+      if (!result.ok) {
+        var errMsg = result.data.error || 'Unknown error';
+        showError('Lỗi ' + result.status + ': ' + errMsg);
+        jsonOutput.textContent = JSON.stringify(result.data, null, 2);
+        return;
+      }
+      var r = result.data;
+      var summary = 'Customers ' + r.customerChanges + ' (' + r.insertedCustomers + '+' + r.updatedCustomers + ')\n' +
+        'Orders ' + r.orderChanges + ' (' + r.insertedOrders + '+' + r.updatedOrders + ')\n' +
+        'Order Items ' + r.orderItemChanges + ' (' + r.insertedOrderItems + '+' + r.updatedOrderItems + ')\n' +
+        'Skipped ' + (r.skippedOrders || 0) + '\n\n' +
+        JSON.stringify(r, null, 2);
+      jsonOutput.textContent = summary;
+    })
+    .catch(function(err) {
+      showError('Sync failed: ' + err.message);
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Sync Data';
+      isLoading = false;
+    });
+  }
+</script>
+</body>
+</html>

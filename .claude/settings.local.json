@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:pos.pages.fm)",
+      "Bash(head:*)",
+      "Bash(grep:*)",
+      "Bash(node:*)",
+      "Bash(python3:*)",
+      "Bash(npx:*)",
+      "Bash(tail:*)"
+    ]
+  }
+}

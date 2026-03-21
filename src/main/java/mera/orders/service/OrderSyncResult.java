@@ -1,0 +1,36 @@
+package mera.orders.service;
+
+import lombok.Builder;
+import lombok.Getter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Getter
+@Builder
+public class OrderSyncResult {
+
+  private final int totalOrdersFromApi;
+  private final int insertedCustomers;
+  private final int updatedCustomers;
+  private final int insertedOrders;
+  private final int updatedOrders;
+  private final int insertedOrderItems;
+  private final int updatedOrderItems;
+  private final int skippedOrders;
+
+  @Builder.Default
+  private final List<String> errorMessages = new ArrayList<>();
+
+  public int getCustomerChanges() {
+    return insertedCustomers + updatedCustomers;
+  }
+
+  public int getOrderChanges() {
+    return insertedOrders + updatedOrders;
+  }
+
+  public int getOrderItemChanges() {
+    return insertedOrderItems + updatedOrderItems;
+  }
+}
