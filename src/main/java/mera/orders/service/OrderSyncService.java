@@ -17,11 +17,16 @@ import mera.orders.repository.OrderRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -78,7 +83,8 @@ public class OrderSyncService {
     int insertedOrderItems = 0;
     int updatedOrderItems = 0;
     int skippedOrders = 0;
-    var errorMessages = new java.util.ArrayList<String>();
+    var errorMessages = new ArrayList<String>();
+    var skippedOrderIds = new ArrayList<String>();
 
     int currentPage = pageNumber;
     int totalPages = 1;
@@ -119,6 +125,7 @@ public class OrderSyncService {
         } catch (Exception e) {
           log.error("Failed to sync order id={}: {}", dto.getId(), e.getMessage());
           errorMessages.add("Order " + dto.getId() + ": " + e.getMessage());
+          skippedOrderIds.add(dto.getId());
           skippedOrders++;
         }
       }
@@ -146,6 +153,9 @@ public class OrderSyncService {
         result.getOrderChanges(),
         result.getOrderItemChanges(),
         result.getSkippedOrders());
+
+    // Save skipped order IDs to JSON file
+    saveSkippedOrders(skippedOrderIds, errorMessages);
 
     return result;
   }
@@ -465,6 +475,47 @@ public class OrderSyncService {
 
   private void mergeResult(OrderSyncResult target, OrderSyncResult source) {
     target.getErrorMessages().addAll(source.getErrorMessages());
+  }
+
+  // ============================================================
+  // Skipped orders file writer
+  // ============================================================
+
+  private static final DateTimeFormatter FILE_DATE_FMT =
+      DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
+  private void saveSkippedOrders(List<String> skippedIds, List<String> errorMessages) {
+    if (skippedIds == null || skippedIds.isEmpty()) {
+      log.info("No skipped orders — skipping file write.");
+      return;
+    }
+
+    try {
+      Path logDir = Paths.get("logs");
+      if (!Files.exists(logDir)) {
+        Files.createDirectories(logDir);
+      }
+
+      String timestamp = LocalDateTime.now().format(FILE_DATE_FMT);
+      Path file = logDir.resolve("skipped_orders_" + timestamp + ".json");
+
+      var lines = new StringBuilder();
+      lines.append("[\n");
+      for (int i = 0; i < skippedIds.size(); i++) {
+        String id = skippedIds.get(i);
+        String reason = (i < errorMessages.size()) ? errorMessages.get(i) : "unknown";
+        lines.append("  {\"orderId\": \"").append(id).append("\", \"reason\": \"").append(reason).append("\"}");
+        if (i < skippedIds.size() - 1) lines.append(",");
+        lines.append("\n");
+      }
+      lines.append("]");
+
+      Files.writeString(file, lines.toString());
+      log.info("Skipped orders saved to: {}", file.toAbsolutePath());
+
+    } catch (IOException e) {
+      log.error("Failed to write skipped orders file: {}", e.getMessage());
+    }
   }
 
   // ============================================================
