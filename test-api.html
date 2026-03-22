@@ -223,8 +223,8 @@
 <body>
 <div class="container">
 
-  <h1>API Orders Preview</h1>
-  <p class="subtitle">Gọi backend proxy để fetch orders. api_key không bị lộ ở frontend.</p>
+  <h1>API Orders Sync</h1>
+  <p class="subtitle">Gọi backend proxy để fetch & sync orders vào DB. api_key không bị lộ ở frontend.</p>
 
   <div class="card">
     <div class="form-grid">
@@ -262,58 +262,54 @@
       </div>
 
       <div class="field">
-        <label>page_number</label>
-        <input type="number" id="pageNumber" value="1" min="1">
-      </div>
-
-      <div class="field">
         <label>page_size</label>
         <input type="number" id="pageSize" value="200" min="1" max="500">
+        <span class="hint" style="font-size:11px; color:#999; margin-top:2px;">(max orders mỗi page, backend tự động duyệt hết)</span>
       </div>
     </div>
 
     <div class="btn-row">
-      <button class="primary" id="btnSend" onclick="sendRequest()">Gửi Request</button>
+      <button class="primary" id="btnSend" onclick="syncOrders()">Sync Orders</button>
       <button class="secondary" onclick="clearResult()">Xóa Kết Quả</button>
-      <button class="danger" id="btnSync" onclick="syncData()">Sync Data</button>
     </div>
 
     <div class="error-box" id="errorBox"></div>
   </div>
 
   <div class="card result-section">
-    <div class="section-title">Kết quả xử lý thời gian (backend)</div>
-
-    <div class="timestamp-box">
-      <div class="row">
-        <span class="lbl">startDate đã xử lý:</span>
-        <span class="val" id="startProcessed">—</span>
-      </div>
-      <div class="row">
-        <span class="lbl">startDateTime (timestamp):</span>
-        <span class="val" id="startTimestamp">—</span>
-      </div>
-      <div class="row">
-        <span class="lbl">endDate đã xử lý:</span>
-        <span class="val" id="endProcessed">—</span>
-      </div>
-      <div class="row">
-        <span class="lbl">endDateTime (timestamp):</span>
-        <span class="val" id="endTimestamp">—</span>
-      </div>
-    </div>
+    <div class="section-title">Kết quả sync</div>
 
     <div class="info-row">
-      <span class="lbl">Số orders trả về:</span>
+      <span class="lbl">Tổng orders (API):</span>
       <span class="val" id="totalOrders">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Orders đã sync:</span>
+      <span class="val" id="syncedCount">—</span>
     </div>
     <div class="info-row">
       <span class="lbl">Trạng thái:</span>
       <span class="val" id="statusFilter">—</span>
     </div>
     <div class="info-row">
-      <span class="lbl">Page / Size:</span>
+      <span class="lbl">Page Size:</span>
       <span class="val" id="pageInfo">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Customers:</span>
+      <span class="val" id="customerStats">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Orders:</span>
+      <span class="val" id="orderStats">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Order Items:</span>
+      <span class="val" id="itemStats">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Skipped:</span>
+      <span class="val" id="skippedCount">—</span>
     </div>
 
     <div class="json-box" id="jsonOutput">Chưa có kết quả. Nhấn "Gửi Request" để bắt đầu.</div>
@@ -322,26 +318,14 @@
 </div>
 
 <script>
-  /**
-   * Flow:
-   * 1. Frontend gửi POST /api/orders/preview với JSON body
-   * 2. Backend xử lý ngày: startDate = ngày 00:00:00 - 7h,
-   *                         endDate   = ngày 23:59:59 - 7h
-   *    rồi convert sang Unix timestamp (seconds)
-   * 3. Backend gọi OrderApiClient với params động
-   * 4. Backend trả OrderPreviewResult JSON về frontend
-   * 5. Frontend hiển thị JSON trong <pre>
-   */
-
   var isLoading = false;
 
-  function sendRequest() {
+  function syncOrders() {
     if (isLoading) return;
 
     var errorBox = document.getElementById('errorBox');
     var jsonOutput = document.getElementById('jsonOutput');
 
-    // Hide previous error
     errorBox.classList.remove('visible');
     jsonOutput.textContent = '';
 
@@ -349,17 +333,12 @@
     var startDate    = document.getElementById('startDate').value.trim();
     var endDate      = document.getElementById('endDate').value.trim();
     var status       = document.getElementById('status').value.trim();
-    var pageNumber   = parseInt(document.getElementById('pageNumber').value) || 1;
     var pageSize     = parseInt(document.getElementById('pageSize').value) || 200;
     var updateStatus = document.getElementById('updateStatus').value;
 
-    // Client-side validation (basic)
-    if (!startDate) {
-      showError('Vui lòng chọn Start Date');
-      return;
-    }
-    if (!endDate) {
-      showError('Vui lòng chọn End Date');
+    // Validation
+    if (!startDate || !endDate) {
+      showError('Vui lòng chọn Start Date và End Date');
       return;
     }
     if (endDate < startDate) {
@@ -367,131 +346,17 @@
       return;
     }
 
-    // Build request body
     var body = {
       startDate: startDate,
       endDate: endDate,
-      pageNumber: pageNumber,
       pageSize: pageSize,
       updateStatus: updateStatus
     };
-
-    // Only include status if it has a value
     if (status !== '') {
       body.status = status;
     }
 
-    // Show loading state
     var btn = document.getElementById('btnSend');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="loading"></span>Đang gửi...';
-    isLoading = true;
-
-    // Send POST request
-    fetch('/api/orders/preview', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    })
-    .then(function(response) {
-      // Read response as JSON first
-      return response.json().then(function(data) {
-        return { ok: response.ok, status: response.status, data: data };
-      });
-    })
-    .then(function(result) {
-      // Update timestamp display from response
-      document.getElementById('startProcessed').textContent =
-        result.data.startDate || '—';
-      document.getElementById('startTimestamp').textContent =
-        result.data.startTimestamp || '—';
-      document.getElementById('endProcessed').textContent =
-        result.data.endDate || '—';
-      document.getElementById('endTimestamp').textContent =
-        result.data.endTimestamp || '—';
-      document.getElementById('totalOrders').textContent =
-        (result.data.totalFromApi != null) ? result.data.totalFromApi : '—';
-      document.getElementById('statusFilter').textContent =
-        (result.data.status) ? result.data.status : 'không lọc';
-      document.getElementById('pageInfo').textContent =
-        (result.data.pageNumber || '1') + ' / ' + (result.data.pageSize || '200');
-
-      if (!result.ok) {
-        // Server returned 4xx/5xx
-        var errMsg = result.data.error || 'Unknown error';
-        showError('Lỗi ' + result.status + ': ' + errMsg);
-        jsonOutput.textContent = JSON.stringify(result.data, null, 2);
-      } else {
-        // Success - display JSON
-        jsonOutput.textContent = JSON.stringify(result.data, null, 2);
-      }
-    })
-    .catch(function(err) {
-      showError('Request failed: ' + err.message);
-    })
-    .finally(function() {
-      // Reset button
-      btn.disabled = false;
-      btn.textContent = 'Gửi Request';
-      isLoading = false;
-    });
-  }
-
-  function clearResult() {
-    document.getElementById('jsonOutput').textContent =
-      'Chưa có kết quả. Nhấn "Gửi Request" để bắt đầu.';
-    document.getElementById('errorBox').classList.remove('visible');
-    document.getElementById('startProcessed').textContent = '—';
-    document.getElementById('startTimestamp').textContent = '—';
-    document.getElementById('endProcessed').textContent = '—';
-    document.getElementById('endTimestamp').textContent = '—';
-    document.getElementById('totalOrders').textContent = '—';
-    document.getElementById('statusFilter').textContent = '—';
-    document.getElementById('pageInfo').textContent = '—';
-  }
-
-  function showError(msg) {
-    var el = document.getElementById('errorBox');
-    el.textContent = msg;
-    el.classList.add('visible');
-  }
-
-  function syncData() {
-    if (isLoading) return;
-
-    var errorBox = document.getElementById('errorBox');
-    var jsonOutput = document.getElementById('jsonOutput');
-
-    errorBox.classList.remove('visible');
-    jsonOutput.textContent = '';
-
-    // Gather same values as preview
-    var startDate    = document.getElementById('startDate').value.trim();
-    var endDate      = document.getElementById('endDate').value.trim();
-    var status       = document.getElementById('status').value.trim();
-    var pageNumber   = parseInt(document.getElementById('pageNumber').value) || 1;
-    var pageSize     = parseInt(document.getElementById('pageSize').value) || 200;
-    var updateStatus = document.getElementById('updateStatus').value;
-
-    if (!startDate || !endDate) {
-      showError('Vui lòng chọn Start Date và End Date');
-      return;
-    }
-
-    var body = {
-      startDate: startDate,
-      endDate: endDate,
-      pageNumber: pageNumber,
-      pageSize: pageSize,
-      updateStatus: updateStatus
-    };
-    if (status !== '') {
-      body.status = status;
-    }
-
-    var btn = document.getElementById('btnSync');
     btn.disabled = true;
     btn.innerHTML = '<span class="loading"></span>Đang sync...';
     isLoading = true;
@@ -514,21 +379,55 @@
         return;
       }
       var r = result.data;
-      var summary = 'Customers ' + r.customerChanges + ' (' + r.insertedCustomers + '+' + r.updatedCustomers + ')\n' +
-        'Orders ' + r.orderChanges + ' (' + r.insertedOrders + '+' + r.updatedOrders + ')\n' +
-        'Order Items ' + r.orderItemChanges + ' (' + r.insertedOrderItems + '+' + r.updatedOrderItems + ')\n' +
-        'Skipped ' + (r.skippedOrders || 0) + '\n\n' +
-        JSON.stringify(r, null, 2);
-      jsonOutput.textContent = summary;
+
+      // Update stats
+      document.getElementById('totalOrders').textContent =
+        (r.totalOrdersFromApi != null) ? r.totalOrdersFromApi : '—';
+      document.getElementById('statusFilter').textContent =
+        (r.status) ? r.status : 'không lọc';
+      document.getElementById('pageInfo').textContent = pageSize;
+      document.getElementById('customerStats').textContent =
+        r.insertedCustomers + ' inserted, ' + r.updatedCustomers + ' updated';
+      document.getElementById('orderStats').textContent =
+        r.insertedOrders + ' inserted, ' + r.updatedOrders + ' updated';
+      document.getElementById('itemStats').textContent =
+        r.insertedOrderItems + ' inserted, ' + r.updatedOrderItems + ' updated';
+      document.getElementById('skippedCount').textContent = r.skippedOrders || 0;
+
+      // Calculate synced count (orders that were actually processed)
+      var synced = (r.insertedOrders || 0) + (r.updatedOrders || 0);
+      document.getElementById('syncedCount').textContent = synced;
+
+      jsonOutput.textContent = JSON.stringify(r, null, 2);
     })
     .catch(function(err) {
       showError('Sync failed: ' + err.message);
     })
     .finally(function() {
       btn.disabled = false;
-      btn.textContent = 'Sync Data';
+      btn.textContent = 'Sync Orders';
       isLoading = false;
     });
+  }
+
+  function clearResult() {
+    document.getElementById('jsonOutput').textContent =
+      'Chưa có kết quả. Nhấn "Sync Orders" để bắt đầu.';
+    document.getElementById('errorBox').classList.remove('visible');
+    document.getElementById('totalOrders').textContent = '—';
+    document.getElementById('syncedCount').textContent = '—';
+    document.getElementById('statusFilter').textContent = '—';
+    document.getElementById('pageInfo').textContent = '—';
+    document.getElementById('customerStats').textContent = '—';
+    document.getElementById('orderStats').textContent = '—';
+    document.getElementById('itemStats').textContent = '—';
+    document.getElementById('skippedCount').textContent = '—';
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('errorBox');
+    el.textContent = msg;
+    el.classList.add('visible');
   }
 </script>
 </body>

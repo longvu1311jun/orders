@@ -1,4 +1,4 @@
-package mera.orders.dto;
+package mera.orders.DTO;
 
 import lombok.Getter;
 import lombok.Setter;

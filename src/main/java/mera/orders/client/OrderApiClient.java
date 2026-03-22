@@ -1,6 +1,7 @@
 package mera.orders.client;
 
 import lombok.extern.slf4j.Slf4j;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import mera.orders.DTO.OrderApiDto;
 import mera.orders.DTO.OrderListResponseDto;
 import mera.orders.exception.ApiClientException;
@@ -36,7 +37,8 @@ public class OrderApiClient {
    * Fetch orders using configured URL (legacy method).
    */
   public List<OrderApiDto> fetchOrders() {
-    return fetchOrdersDynamic(0, 0, 1, 200, "inserted_at", null);
+    OrderListResponseDto resp = fetchOrdersPage(0, 0, 1, 200, "inserted_at", null);
+    return resp.getData() != null ? resp.getData() : Collections.emptyList();
   }
 
   /**
@@ -49,8 +51,9 @@ public class OrderApiClient {
    * @param pageSize       page size
    * @param updateStatus   "inserted_at" or "updated_at"
    * @param status         order status filter, null/blank = no filter
+   * @return OrderListResponseDto containing data + pagination metadata
    */
-  public List<OrderApiDto> fetchOrdersDynamic(
+  public OrderListResponseDto fetchOrdersPage(
       long startTimestamp,
       long endTimestamp,
       int pageNumber,
@@ -71,27 +74,26 @@ public class OrderApiClient {
     }
 
     String url = builder.build().toUriString();
-    log.info("Calling API: {}", maskUrl(url));
+    String maskedUrl = maskUrl(url);
+    log.info("Calling API: {}", maskedUrl);
+    log.info("Full URL (for reference): {}", url);
 
     try {
-      ResponseEntity<OrderListResponseDto> response = restTemplate.getForEntity(
-          url,
-          OrderListResponseDto.class
-      );
+      // First, get raw response as String to see actual structure
+      ResponseEntity<String> rawEntity = restTemplate.getForEntity(url, String.class);
+      String rawResponse = rawEntity.getBody();
+      log.info("RAW API STATUS: {}, BODY ({} chars): {}", rawEntity.getStatusCode(),
+          rawResponse != null ? rawResponse.length() : 0, rawResponse);
 
-      if (response.getBody() == null) {
-        log.warn("API response body is null");
-        return Collections.emptyList();
-      }
+      // Then manually parse with Jackson ObjectMapper (same instance RestTemplate uses)
+      ObjectMapper mapper = new ObjectMapper();
+      OrderListResponseDto dto = mapper.readValue(rawResponse, OrderListResponseDto.class);
+      log.info("Parsed DTO successfully, data size: {}",
+          dto.getData() != null ? dto.getData().size() : 0);
+      log.info("Pagination: page={}, totalEntries={}, totalPages={}",
+          dto.getPageNumber(), dto.getTotalEntries(), dto.getTotalPages());
 
-      List<OrderApiDto> orders = response.getBody().getData();
-      if (orders == null) {
-        log.warn("API response data field is null");
-        return Collections.emptyList();
-      }
-
-      log.info("Fetched {} orders from API", orders.size());
-      return orders;
+      return dto;
 
     } catch (HttpClientErrorException e) {
       String body = e.getResponseBodyAsString();

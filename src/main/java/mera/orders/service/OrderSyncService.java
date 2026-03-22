@@ -48,11 +48,12 @@ public class OrderSyncService {
   }
 
   /**
-   * Sync orders using dynamic parameters (uses same timestamp logic as preview).
+   * Sync orders using dynamic parameters with automatic pagination.
+   * Fetches all pages from API and syncs each page immediately.
    *
    * @param startTimestamp Unix timestamp (seconds) - start of range
    * @param endTimestamp   Unix timestamp (seconds) - end of range
-   * @param pageNumber     1-based page number
+   * @param pageNumber     1-based page number (starting page)
    * @param pageSize       page size
    * @param updateStatus   "inserted_at" or "updated_at"
    * @param status         order status filter, null/blank = no filter
@@ -65,36 +66,82 @@ public class OrderSyncService {
       String updateStatus,
       String status
   ) {
-    log.info("Starting order sync: startTs={}, endTs={}, page={}, size={}, updateStatus={}, status={}",
+    log.info("Starting order sync with pagination: startTs={}, endTs={}, page={}, size={}, updateStatus={}, status={}",
         startTimestamp, endTimestamp, pageNumber, pageSize, updateStatus, status);
 
-    List<OrderApiDto> orders = orderApiClient.fetchOrdersDynamic(
-        startTimestamp, endTimestamp, pageNumber, pageSize, updateStatus, status
-    );
+    // Cumulative counters
+    int totalEntries = 0;
+    int insertedCustomers = 0;
+    int updatedCustomers = 0;
+    int insertedOrders = 0;
+    int updatedOrders = 0;
+    int insertedOrderItems = 0;
+    int updatedOrderItems = 0;
+    int skippedOrders = 0;
+    var errorMessages = new java.util.ArrayList<String>();
+
+    int currentPage = pageNumber;
+    int totalPages = 1;
+    int totalSynced = 0;
+
+    do {
+      log.info("Fetching page {} of {}...", currentPage, totalPages);
+
+      var resp = orderApiClient.fetchOrdersPage(
+          startTimestamp, endTimestamp, currentPage, pageSize, updateStatus, status
+      );
+
+      List<OrderApiDto> orders = resp.getData() != null ? resp.getData() : List.of();
+
+      // Update pagination info from response
+      if (resp.getTotalPages() != null) {
+        totalPages = resp.getTotalPages();
+      }
+      if (resp.getTotalEntries() != null) {
+        totalEntries = resp.getTotalEntries();
+      }
+
+      log.info("Page {}: fetched {} orders (totalEntries={}, totalPages={})",
+          currentPage, orders.size(),
+          resp.getTotalEntries(), resp.getTotalPages());
+
+      // Sync each order in this page immediately
+      for (OrderApiDto dto : orders) {
+        try {
+          OrderSyncResult partial = syncSingleOrder(dto);
+          insertedCustomers += partial.getInsertedCustomers();
+          updatedCustomers += partial.getUpdatedCustomers();
+          insertedOrders += partial.getInsertedOrders();
+          updatedOrders += partial.getUpdatedOrders();
+          insertedOrderItems += partial.getInsertedOrderItems();
+          updatedOrderItems += partial.getUpdatedOrderItems();
+          totalSynced++;
+        } catch (Exception e) {
+          log.error("Failed to sync order id={}: {}", dto.getId(), e.getMessage());
+          errorMessages.add("Order " + dto.getId() + ": " + e.getMessage());
+          skippedOrders++;
+        }
+      }
+
+      currentPage++;
+
+    } while (currentPage <= totalPages);
 
     OrderSyncResult result = OrderSyncResult.builder()
-        .totalOrdersFromApi(orders.size())
-        .insertedCustomers(0)
-        .updatedCustomers(0)
-        .insertedOrders(0)
-        .updatedOrders(0)
-        .insertedOrderItems(0)
-        .updatedOrderItems(0)
-        .skippedOrders(0)
+        .totalOrdersFromApi(totalEntries)
+        .insertedCustomers(insertedCustomers)
+        .updatedCustomers(updatedCustomers)
+        .insertedOrders(insertedOrders)
+        .updatedOrders(updatedOrders)
+        .insertedOrderItems(insertedOrderItems)
+        .updatedOrderItems(updatedOrderItems)
+        .skippedOrders(skippedOrders)
+        .errorMessages(errorMessages)
         .build();
 
-    for (OrderApiDto dto : orders) {
-      try {
-        OrderSyncResult partial = syncSingleOrder(dto);
-        mergeResult(result, partial);
-      } catch (Exception e) {
-        log.error("Failed to sync order id={}: {}", dto.getId(), e.getMessage());
-        result.getErrorMessages().add("Order " + dto.getId() + ": " + e.getMessage());
-      }
-    }
-
-    log.info("Sync completed. total={}, customers={}, orders={}, items={}, skipped={}",
+    log.info("Sync completed. totalEntries={}, synced={}, customers={}, orders={}, items={}, skipped={}",
         result.getTotalOrdersFromApi(),
+        totalSynced,
         result.getCustomerChanges(),
         result.getOrderChanges(),
         result.getOrderItemChanges(),

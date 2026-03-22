@@ -2,7 +2,8 @@ package org.report.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import mera.orders.dto.OrderPreviewRequest;
+
+import mera.orders.DTO.OrderPreviewRequest;
 import mera.orders.service.OrderPreviewResult;
 import mera.orders.service.OrderPreviewService;
 import mera.orders.service.OrderSyncResult;

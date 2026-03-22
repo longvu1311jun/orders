@@ -185,7 +185,7 @@ public class OrderApiDto {
   private Double partnerFee;
 
   @JsonProperty("return_fee")
-  private Double returnFee;
+  private Object returnFee;
 
   @JsonProperty("fee_marketplace")
   private Double feeMarketplace;
@@ -200,7 +200,7 @@ public class OrderApiDto {
   private Double leveraPoint;
 
   // === Partner / Tracking ===
-  private String partner;
+  private Object partner;
 
   @JsonProperty("tracking_link")
   private String trackingLink;

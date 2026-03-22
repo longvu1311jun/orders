@@ -3,68 +3,230 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orders API Tool</title>
+  <title>Test API - Orders Preview</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0f2f5; color: #333; font-size: 14px; padding: 24px; min-height: 100vh; }
-    .layout { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-    .header { text-align: center; padding: 8px 0 4px; }
-    .header h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; }
-    .header .subtitle { color: #888; font-size: 13px; margin-top: 4px; }
-    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
-    .card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #777; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr); gap: 14px; }
-    .field { display: flex; flex-direction: column; gap: 5px; }
-    .field label { font-size: 12px; font-weight: 600; color: #666; }
-    .field label .hint { font-weight: 400; color: #aaa; }
-    input, select { padding: 9px 11px; border: 1.5px solid #ddd; border-radius: 7px; font-size: 13px; outline: none; transition: border-color 0.15s; background: #fff; }
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 24px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 4px 0;
+      font-size: 22px;
+      color: #1a1a1a;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .field.full-width { grid-column: 1 / -1; }
+
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
+    }
+
+    label .hint { font-weight: 400; color: #999; }
+
+    input, select {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
     input:focus, select:focus { border-color: #4f90d9; }
-    input[type="number"] { width: 90px; }
-    .action-bar { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
-    button { padding: 9px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, opacity 0.15s; }
-    button:disabled { opacity: 0.55; cursor: not-allowed; }
-    button.btn-primary { background: #4f90d9; color: #fff; }
-    button.btn-primary:hover:not(:disabled) { background: #3a7bc8; }
-    button.btn-secondary { background: #e4e4e4; color: #444; }
-    button.btn-secondary:hover:not(:disabled) { background: #d4d4d4; }
-    button.btn-success { background: #27ae60; color: #fff; }
-    button.btn-success:hover:not(:disabled) { background: #1e8449; }
-    .sp { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
-    button.btn-secondary .sp { border: 2px solid rgba(0,0,0,0.15); border-top-color: #555; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .pager { display: flex; gap: 6px; align-items: center; margin-left: auto; }
-    .pager button { padding: 8px 14px; font-size: 12px; }
-    .pager .pg-info { font-size: 13px; color: #888; white-space: nowrap; min-width: 60px; text-align: center; }
-    .result-meta { display: none; gap: 20px; flex-wrap: wrap; margin-bottom: 14px; }
-    .result-meta.visible { display: flex; }
-    .meta-item { display: flex; flex-direction: column; gap: 2px; }
-    .meta-item .lbl { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.3px; }
-    .meta-item .val { font-size: 14px; font-weight: 700; color: #1a1a2e; font-family: 'Consolas', monospace; }
-    .meta-item .val.small { font-size: 12px; color: #555; }
-    .json-box { background: #1a1a2e; border-radius: 8px; padding: 16px; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.6; color: #a8e6cf; max-height: 420px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
-    .error-box { background: #fff3f3; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 12px 16px; color: #dc2626; font-size: 13px; margin-top: 12px; display: none; }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    button.primary { background: #4f90d9; color: #fff; }
+    button.primary:hover:not(:disabled) { background: #3a7bc8; }
+
+    button.secondary { background: #e8e8e8; color: #333; }
+    button.secondary:hover:not(:disabled) { background: #d8d8d8; }
+
+    button.danger { background: #e74c3c; color: #fff; }
+    button.danger:hover:not(:disabled) { background: #c0392b; }
+
+    .result-section { margin-top: 0; }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a1a;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .timestamp-box {
+      background: #f8f9fa;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 14px;
+    }
+
+    .timestamp-box .row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .timestamp-box .row:last-child { margin-bottom: 0; }
+
+    .timestamp-box .lbl { min-width: 150px; color: #888; }
+
+    .timestamp-box .val {
+      font-family: 'Consolas', 'Courier New', monospace;
+      color: #d63384;
+      font-weight: 600;
+    }
+
+    .info-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .info-row .lbl { min-width: 100px; color: #888; }
+
+    .info-row .val {
+      font-weight: 600;
+      color: #222;
+    }
+
+    .json-box {
+      background: #1a1a2e;
+      color: #a8e6cf;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      word-break: break-all;
+      max-height: 500px;
+      overflow-y: auto;
+      margin-top: 14px;
+      white-space: pre-wrap;
+    }
+
+    .json-box .json-key   { color: #ffd166; }
+    .json-box .json-num  { color: #a8e6cf; }
+    .json-box .json-str  { color: #a8e6cf; }
+    .json-box .json-bool { color: #ff6b6b; }
+    .json-box .json-null { color: #888; }
+
+    .error-box {
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: #856404;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
     .error-box.visible { display: block; }
-    .sync-result { margin-top: 14px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; display: none; }
-    .sync-result.visible { display: block; }
-    .sync-result .srow { display: flex; gap: 24px; flex-wrap: wrap; }
-    .sync-result .kpi { display: flex; flex-direction: column; gap: 2px; min-width: 70px; }
-    .sync-result .kpi .k { font-size: 11px; color: #999; text-transform: uppercase; }
-    .sync-result .kpi .v { font-size: 20px; font-weight: 700; color: #1a1a2e; }
-    .sync-result .kpi .v.ok { color: #27ae60; }
-    .sync-result .kpi .v.fail { color: #e74c3c; }
+
+    .success-badge {
+      display: inline-block;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .loading {
+      display: inline-block;
+      margin-right: 8px;
+      font-size: 14px;
+    }
+
+    .loading::after {
+      content: '';
+      display: inline-block;
+      animation: spin 1s linear infinite;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-<div class="layout">
+<div class="container">
 
-  <div class="header">
-    <h1>Orders API Tool</h1>
-    <p class="subtitle">Proxy qua backend &mdash; api_key khong bi lo</p>
-  </div>
+  <h1>API Orders Sync</h1>
+  <p class="subtitle">Gọi backend proxy để fetch & sync orders vào DB. api_key không bị lộ ở frontend.</p>
 
-  <!-- FILTER CARD -->
   <div class="card">
-    <div class="card-title">Bo loc</div>
     <div class="form-grid">
       <div class="field">
         <label>updateStatus</label>
@@ -73,333 +235,200 @@
           <option value="updated_at">updated_at</option>
         </select>
       </div>
+
       <div class="field">
         <label>status</label>
         <select id="status">
-          <option value="">-- Khong loc --</option>
-          <option value="0">0 - Moi tao</option>
-          <option value="1">1 - Cho xac nhan</option>
-          <option value="2">2 - Da xac nhan</option>
-          <option value="3">3 - Hoan thanh</option>
-          <option value="4">4 - Da huy</option>
-          <option value="5">5 - Tra hang</option>
-          <option value="6">6 - Dang giao</option>
-          <option value="7">7 - Giao that bai</option>
+          <option value="">-- Không lọc --</option>
+          <option value="0">0 - Mới tạo</option>
+          <option value="1">1 - Chờ xác nhận</option>
+          <option value="2">2 - Đã xác nhận</option>
+          <option value="3">3 - Hoàn thành</option>
+          <option value="4">4 - Đã hủy</option>
+          <option value="5">5 - Trả hàng</option>
+          <option value="6">6 - Đang giao</option>
+          <option value="7">7 - Giao thất bại</option>
         </select>
       </div>
+
       <div class="field">
         <label>Start Date <span class="hint">(yyyy-MM-dd)</span></label>
-        <input type="date" id="startDate">
+        <input type="date" id="startDate" value="2025-12-01">
       </div>
+
       <div class="field">
         <label>End Date <span class="hint">(yyyy-MM-dd)</span></label>
-        <input type="date" id="endDate">
+        <input type="date" id="endDate" value="2025-12-31">
       </div>
-      <div class="field">
-        <label>page_number</label>
-        <input type="number" id="pageNumber" value="1" min="1">
-      </div>
+
       <div class="field">
         <label>page_size</label>
         <input type="number" id="pageSize" value="200" min="1" max="500">
+        <span class="hint" style="font-size:11px; color:#999; margin-top:2px;">(max orders mỗi page, backend tự động duyệt hết)</span>
       </div>
     </div>
 
-    <div class="action-bar">
-      <button type="button" id="previewBtn" class="btn-primary">Gui Preview</button>
-
-      <div class="pager">
-        <button type="button" id="prevBtn" class="btn-secondary" disabled>&#8592; Prev</button>
-        <span class="pg-info" id="pgDisplay">Trang 1</span>
-        <button type="button" id="nextBtn" class="btn-secondary">Next &#8594;</button>
-      </div>
-
-      <button type="button" id="syncBtn" class="btn-success">Chay Sync DB</button>
-      <button type="button" id="clearBtn" class="btn-secondary">Xoa</button>
+    <div class="btn-row">
+      <button class="primary" id="btnSend" onclick="syncOrders()">Sync Orders</button>
+      <button class="secondary" onclick="clearResult()">Xóa Kết Quả</button>
     </div>
 
     <div class="error-box" id="errorBox"></div>
   </div>
 
-  <!-- RESULT CARD -->
-  <div class="card">
-    <div class="card-title">Ket qua</div>
+  <div class="card result-section">
+    <div class="section-title">Kết quả sync</div>
 
-    <div class="result-meta" id="resultMeta">
-      <div class="meta-item">
-        <span class="lbl">Start Timestamp</span>
-        <span class="val" id="mStartTs">-</span>
-      </div>
-      <div class="meta-item">
-        <span class="lbl">End Timestamp</span>
-        <span class="val" id="mEndTs">-</span>
-      </div>
-      <div class="meta-item">
-        <span class="lbl">So orders</span>
-        <span class="val" id="mTotal">-</span>
-      </div>
-      <div class="meta-item">
-        <span class="lbl">Response time</span>
-        <span class="val small" id="mTime">-</span>
-      </div>
-      <div class="meta-item">
-        <span class="lbl">Status loc</span>
-        <span class="val small" id="mStatus">-</span>
-      </div>
+    <div class="info-row">
+      <span class="lbl">Tổng orders (API):</span>
+      <span class="val" id="totalOrders">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Orders đã sync:</span>
+      <span class="val" id="syncedCount">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Trạng thái:</span>
+      <span class="val" id="statusFilter">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Page Size:</span>
+      <span class="val" id="pageInfo">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Customers:</span>
+      <span class="val" id="customerStats">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Orders:</span>
+      <span class="val" id="orderStats">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Order Items:</span>
+      <span class="val" id="itemStats">—</span>
+    </div>
+    <div class="info-row">
+      <span class="lbl">Skipped:</span>
+      <span class="val" id="skippedCount">—</span>
     </div>
 
-    <div class="sync-result" id="syncResult">
-      <div class="srow">
-        <div class="kpi">
-          <span class="k">Customers</span>
-          <span class="v ok" id="sCust">-</span>
-        </div>
-        <div class="kpi">
-          <span class="k">Orders</span>
-          <span class="v ok" id="sOrd">-</span>
-        </div>
-        <div class="kpi">
-          <span class="k">Order Items</span>
-          <span class="v ok" id="sItem">-</span>
-        </div>
-        <div class="kpi">
-          <span class="k">Skipped</span>
-          <span class="v fail" id="sSkip">-</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="json-box" id="jsonOutput">Chua co ket qua. Nhan "Gui Preview" de bat dau.</div>
+    <div class="json-box" id="jsonOutput">Chưa có kết quả. Nhấn "Gửi Request" để bắt đầu.</div>
   </div>
 
 </div>
 
 <script>
-(function() {
-  'use strict';
+  var isLoading = false;
 
-  /* === STATE === */
-  var gPage = 1;
-  var gLoading = false;
+  function syncOrders() {
+    if (isLoading) return;
 
-  /* === HELPERS === */
-  function $(id) { return document.getElementById(id); }
+    var errorBox = document.getElementById('errorBox');
+    var jsonOutput = document.getElementById('jsonOutput');
 
-  /* === INIT: load saved filters === */
-  function loadSaved() {
-    var s = localStorage.getItem('ot_filters');
-    if (!s) return;
-    try {
-      var f = JSON.parse(s);
-      if (f.startDate)    $('startDate').value    = f.startDate;
-      if (f.endDate)      $('endDate').value      = f.endDate;
-      if (f.status)      $('status').value      = f.status;
-      if (f.updateStatus) $('updateStatus').value = f.updateStatus;
-      if (f.pageSize)     $('pageSize').value     = f.pageSize;
-    } catch(e) {}
-  }
+    errorBox.classList.remove('visible');
+    jsonOutput.textContent = '';
 
-  /* === BUILD PAYLOAD === */
-  function buildPayload(pageOverride) {
-    var startDate    = $('startDate').value.trim();
-    var endDate      = $('endDate').value.trim();
-    var status       = $('status').value.trim();
-    var pageSize     = parseInt($('pageSize').value) || 200;
-    var updateStatus = $('updateStatus').value;
-    var pageNumber   = pageOverride != null ? pageOverride : parseInt($('pageNumber').value) || 1;
+    // Gather values
+    var startDate    = document.getElementById('startDate').value.trim();
+    var endDate      = document.getElementById('endDate').value.trim();
+    var status       = document.getElementById('status').value.trim();
+    var pageSize     = parseInt(document.getElementById('pageSize').value) || 200;
+    var updateStatus = document.getElementById('updateStatus').value;
 
-    if (!startDate) throw new Error('Vui long chon Start Date');
-    if (!endDate)   throw new Error('Vui long chon End Date');
-    if (endDate < startDate) throw new Error('End Date khong duoc nho hon Start Date');
-
-    var body = {
-      startDate:    startDate,
-      endDate:      endDate,
-      pageNumber:   pageNumber,
-      pageSize:     pageSize,
-      updateStatus: updateStatus
-    };
-    if (status !== '') body.status = status;
-    return body;
-  }
-
-  /* === CALL PREVIEW === */
-  function callPreview(body) {
-    var t0 = Date.now();
-    return fetch('/api/orders/preview', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    }).then(function(resp) {
-      return resp.json().then(function(data) {
-        return { ok: resp.ok, status: resp.status, data: data, ms: Date.now() - t0 };
-      });
-    });
-  }
-
-  /* === CALL SYNC === */
-  function callSync() {
-    return fetch('/api/orders/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    }).then(function(resp) { return resp.json(); });
-  }
-
-  /* === SET BUTTON STATE === */
-  function setLoading(on) {
-    gLoading = on;
-    $('previewBtn').disabled = on;
-    $('prevBtn').disabled   = on || (gPage <= 1);
-    $('nextBtn').disabled   = on;
-    $('syncBtn').disabled = on;
-    if (on) {
-      $('previewBtn').innerHTML = '<span class="sp"></span>Dang gui...';
-    } else {
-      $('previewBtn').textContent = 'Gui Preview';
+    // Validation
+    if (!startDate || !endDate) {
+      showError('Vui lòng chọn Start Date và End Date');
+      return;
     }
-  }
-
-  /* === SHOW ERROR === */
-  function showError(msg) {
-    var el = $('errorBox');
-    el.textContent = msg;
-    el.className = 'error-box visible';
-  }
-
-  /* === SAVE FILTERS === */
-  function saveFilters() {
-    var f = {
-      startDate:    $('startDate').value,
-      endDate:      $('endDate').value,
-      status:       $('status').value,
-      updateStatus: $('updateStatus').value,
-      pageSize:     $('pageSize').value
-    };
-    localStorage.setItem('ot_filters', JSON.stringify(f));
-  }
-
-  /* === RENDER PREVIEW === */
-  function renderPreview(res) {
-    $('errorBox').className = 'error-box';
-    $('syncResult').className = 'sync-result';
-
-    if (!res.ok) {
-      var msg = (res.data && res.data.error) ? res.data.error : 'Unknown error';
-      showError('Loi ' + res.status + ': ' + msg);
-      $('resultMeta').style.display = 'none';
-      $('jsonOutput').textContent = JSON.stringify(res.data, null, 2);
+    if (endDate < startDate) {
+      showError('End Date không được nhỏ hơn Start Date');
       return;
     }
 
-    var d = res.data;
-    $('resultMeta').className = 'result-meta visible';
-    $('mStartTs').textContent  = d.startTimestamp  || '-';
-    $('mEndTs').textContent    = d.endTimestamp    || '-';
-    $('mTotal').textContent   = (d.totalFromApi != null) ? d.totalFromApi : '-';
-    $('mTime').textContent    = res.ms + ' ms';
-    $('mStatus').textContent  = d.status ? d.status : 'khong loc';
-    $('pgDisplay').textContent = 'Trang ' + (d.pageNumber || 1);
-    $('jsonOutput').textContent = JSON.stringify(d, null, 2);
-  }
+    var body = {
+      startDate: startDate,
+      endDate: endDate,
+      pageSize: pageSize,
+      updateStatus: updateStatus
+    };
+    if (status !== '') {
+      body.status = status;
+    }
 
-  /* === RENDER SYNC === */
-  function renderSync(data) {
-    $('errorBox').className = 'error-box';
-    $('resultMeta').style.display = 'none';
-    $('syncResult').className = 'sync-result visible';
-    $('jsonOutput').textContent = JSON.stringify(data, null, 2);
-
-    var ci = (data.insertedCustomers||0) + (data.updatedCustomers||0);
-    var ui = (data.insertedOrders||0)    + (data.updatedOrders||0);
-    var ii = (data.insertedOrderItems||0) + (data.updatedOrderItems||0);
-    var sk = data.skippedOrders || 0;
-
-    $('sCust').textContent = ci + ' (' + (data.insertedCustomers||0) + '+' + (data.updatedCustomers||0) + ')';
-    $('sOrd').textContent  = ui + ' (' + (data.insertedOrders||0)    + '+' + (data.updatedOrders||0)    + ')';
-    $('sItem').textContent = ii + ' (' + (data.insertedOrderItems||0) + '+' + (data.updatedOrderItems||0) + ')';
-    $('sSkip').textContent = sk + ' loi';
-  }
-
-  /* === ACTION: doPreview === */
-  function doPreview() {
-    if (gLoading) return;
-    $('errorBox').className = 'error-box';
-    var body;
-    try { body = buildPayload(gPage); }
-    catch(e) { showError(e.message); return; }
-    $('pageNumber').value = body.pageNumber;
-    saveFilters();
-    setLoading(true);
-    callPreview(body).then(function(res) {
-      renderPreview(res);
-    }).catch(function(err) {
-      showError('Request failed: ' + err.message);
-      $('resultMeta').style.display = 'none';
-      $('jsonOutput').textContent = 'Error: ' + err.message;
-    }).finally(function() { setLoading(false); });
-  }
-
-  /* === ACTION: doNextPage === */
-  function doNextPage() {
-    if (gLoading) return;
-    gPage++;
-    $('pageNumber').value = gPage;
-    doPreview();
-  }
-
-  /* === ACTION: doPrevPage === */
-  function doPrevPage() {
-    if (gLoading || gPage <= 1) return;
-    gPage--;
-    $('pageNumber').value = gPage;
-    doPreview();
-  }
-
-  /* === ACTION: doSync === */
-  function doSync() {
-    if (gLoading) return;
-    $('errorBox').className = 'error-box';
-    var btn = $('syncBtn');
+    var btn = document.getElementById('btnSend');
     btn.disabled = true;
-    btn.innerHTML = '<span class="sp"></span>Dang sync...';
-    gLoading = true;
-    callSync().then(function(data) {
-      renderSync(data);
-    }).catch(function(err) {
+    btn.innerHTML = '<span class="loading"></span>Đang sync...';
+    isLoading = true;
+
+    fetch('/api/orders/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    .then(function(response) {
+      return response.json().then(function(data) {
+        return { ok: response.ok, status: response.status, data: data };
+      });
+    })
+    .then(function(result) {
+      if (!result.ok) {
+        var errMsg = result.data.error || 'Unknown error';
+        showError('Lỗi ' + result.status + ': ' + errMsg);
+        jsonOutput.textContent = JSON.stringify(result.data, null, 2);
+        return;
+      }
+      var r = result.data;
+
+      // Update stats
+      document.getElementById('totalOrders').textContent =
+        (r.totalOrdersFromApi != null) ? r.totalOrdersFromApi : '—';
+      document.getElementById('statusFilter').textContent =
+        (r.status) ? r.status : 'không lọc';
+      document.getElementById('pageInfo').textContent = pageSize;
+      document.getElementById('customerStats').textContent =
+        r.insertedCustomers + ' inserted, ' + r.updatedCustomers + ' updated';
+      document.getElementById('orderStats').textContent =
+        r.insertedOrders + ' inserted, ' + r.updatedOrders + ' updated';
+      document.getElementById('itemStats').textContent =
+        r.insertedOrderItems + ' inserted, ' + r.updatedOrderItems + ' updated';
+      document.getElementById('skippedCount').textContent = r.skippedOrders || 0;
+
+      // Calculate synced count (orders that were actually processed)
+      var synced = (r.insertedOrders || 0) + (r.updatedOrders || 0);
+      document.getElementById('syncedCount').textContent = synced;
+
+      jsonOutput.textContent = JSON.stringify(r, null, 2);
+    })
+    .catch(function(err) {
       showError('Sync failed: ' + err.message);
-      $('resultMeta').style.display = 'none';
-      $('jsonOutput').textContent = 'Error: ' + err.message;
-    }).finally(function() {
+    })
+    .finally(function() {
       btn.disabled = false;
-      btn.textContent = 'Chay Sync DB';
-      gLoading = false;
+      btn.textContent = 'Sync Orders';
+      isLoading = false;
     });
   }
 
-  /* === ACTION: doClear === */
-  function doClear() {
-    gPage = 1;
-    $('pageNumber').value = 1;
-    $('pgDisplay').textContent = 'Trang 1';
-    $('resultMeta').style.display = 'none';
-    $('resultMeta').className = 'result-meta';
-    $('syncResult').className = 'sync-result';
-    $('errorBox').className = 'error-box';
-    $('jsonOutput').textContent = 'Chua co ket qua. Nhan "Gui Preview" de bat dau.';
+  function clearResult() {
+    document.getElementById('jsonOutput').textContent =
+      'Chưa có kết quả. Nhấn "Sync Orders" để bắt đầu.';
+    document.getElementById('errorBox').classList.remove('visible');
+    document.getElementById('totalOrders').textContent = '—';
+    document.getElementById('syncedCount').textContent = '—';
+    document.getElementById('statusFilter').textContent = '—';
+    document.getElementById('pageInfo').textContent = '—';
+    document.getElementById('customerStats').textContent = '—';
+    document.getElementById('orderStats').textContent = '—';
+    document.getElementById('itemStats').textContent = '—';
+    document.getElementById('skippedCount').textContent = '—';
   }
 
-  /* === BIND EVENTS === */
-  $('previewBtn').addEventListener('click', doPreview);
-  $('nextBtn').addEventListener('click', doNextPage);
-  $('prevBtn').addEventListener('click', doPrevPage);
-  $('syncBtn').addEventListener('click', doSync);
-  $('clearBtn').addEventListener('click', doClear);
-
-  /* === START === */
-  loadSaved();
-
-})();
+  function showError(msg) {
+    var el = document.getElementById('errorBox');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
 </script>
 </body>
 </html>

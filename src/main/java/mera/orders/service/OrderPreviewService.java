@@ -3,7 +3,8 @@ package mera.orders.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mera.orders.client.OrderApiClient;
-import mera.orders.dto.OrderPreviewRequest;
+import mera.orders.DTO.OrderApiDto;
+import mera.orders.DTO.OrderPreviewRequest;
 import mera.orders.exception.ApiClientException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -66,9 +68,13 @@ public class OrderPreviewService {
     log.info("Timestamps: startDateTime={}, endDateTime={}", startTs, endTs);
 
     // Call API via client with dynamic params
-    var orders = orderApiClient.fetchOrdersDynamic(
+    var resp = orderApiClient.fetchOrdersPage(
         startTs, endTs, pageNum, pageSz, updStatus, status
     );
+    List<OrderApiDto> orders = resp.getData();
+    if (orders == null) {
+      orders = List.of();
+    }
 
     return OrderPreviewResult.builder()
         .totalFromApi(orders.size())
