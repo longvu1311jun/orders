@@ -280,6 +280,9 @@ public class OrderApiDto {
 
   private String account;
 
+  // === Nested objects ===
+  private CreatorDTO creator;
+
   // === Times (String tạm thời, parse sang LocalDateTime ở bước service) ===
   @JsonProperty("inserted_at")
   private String insertedAt;
