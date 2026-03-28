@@ -37,7 +37,7 @@ public class OrderSyncController {
   public ResponseEntity<?> syncOrders(@RequestBody OrderPreviewRequest request) {
     log.info("Sync request received: startDate={}, endDate={}, status={}, page={}, size={}, updateStatus={}",
         request.getStartDate(), request.getEndDate(),
-        request.getStatus(), request.getPageNumber(), request.getPageSize(), request.getUpdateStatus());
+        request.getStatus(), request.getStartPage() != null ? request.getStartPage() : request.getPageNumber(), request.getPageSize(), request.getUpdateStatus());
     try {
       // Parse dates to timestamps (same logic as preview: local 00:00 - 7h to start, local 23:59:59 - 7h to end)
       LocalDate startLocal = LocalDate.parse(request.getStartDate());
@@ -48,7 +48,9 @@ public class OrderSyncController {
       long endTs = LocalDateTime.of(endLocal, LocalTime.of(23, 59, 59))
           .minusHours(7).toEpochSecond(ZoneOffset.UTC);
 
-      int pageNum = request.getPageNumber() != null ? request.getPageNumber() : 1;
+      // Use startPage if provided, otherwise fall back to pageNumber
+      int pageNum = request.getStartPage() != null ? request.getStartPage()
+          : (request.getPageNumber() != null ? request.getPageNumber() : 1);
       int pageSz = request.getPageSize() != null ? request.getPageSize() : 200;
       String updStatus = request.getUpdateStatus() != null ? request.getUpdateStatus() : "inserted_at";
       String status = request.getStatus();

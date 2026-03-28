@@ -266,6 +266,11 @@
         <input type="number" id="pageSize" value="200" min="1" max="500">
         <span class="hint" style="font-size:11px; color:#999; margin-top:2px;">(max orders mỗi page, backend tự động duyệt hết)</span>
       </div>
+
+      <div class="field">
+        <label>start_page <span class="hint">(resume từ page cụ thể)</span></label>
+        <input type="number" id="startPage" value="" min="1" placeholder="để trống = bắt đầu từ 1">
+      </div>
     </div>
 
     <div class="btn-row">
@@ -335,6 +340,7 @@
     var status       = document.getElementById('status').value.trim();
     var pageSize     = parseInt(document.getElementById('pageSize').value) || 200;
     var updateStatus = document.getElementById('updateStatus').value;
+    var startPage    = parseInt(document.getElementById('startPage').value) || null;
 
     // Validation
     if (!startDate || !endDate) {
@@ -354,6 +360,9 @@
     };
     if (status !== '') {
       body.status = status;
+    }
+    if (startPage !== null && startPage !== '') {
+      body.startPage = startPage;
     }
 
     var btn = document.getElementById('btnSend');

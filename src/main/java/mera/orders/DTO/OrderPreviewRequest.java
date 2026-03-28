@@ -12,5 +12,6 @@ public class OrderPreviewRequest {
   private String status;
   private Integer pageNumber = 1;
   private Integer pageSize = 200;
+  private Integer startPage = 1;
   private String updateStatus = "inserted_at";
 }

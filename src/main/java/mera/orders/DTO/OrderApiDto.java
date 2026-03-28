@@ -299,4 +299,7 @@ public class OrderApiDto {
   // === Response metadata ===
   @JsonProperty("account_name")
   private String accountName;
+
+  // === Status History ===
+  private List<StatusHistoryDto> statusHistory;
 }

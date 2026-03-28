@@ -17,6 +17,8 @@ public class OrderSyncResult {
   private final int updatedOrders;
   private final int insertedOrderItems;
   private final int updatedOrderItems;
+  private final int insertedStatusHistories;
+  private final int updatedStatusHistories;
   private final int skippedOrders;
 
   @Builder.Default
@@ -32,5 +34,9 @@ public class OrderSyncResult {
 
   public int getOrderItemChanges() {
     return insertedOrderItems + updatedOrderItems;
+  }
+
+  public int getStatusHistoryChanges() {
+    return insertedStatusHistories + updatedStatusHistories;
   }
 }
